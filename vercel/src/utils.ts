@@ -12,23 +12,3 @@ export function generate(){
     return ans;
 
 }
-
-export function getAllFiles(dirPath:string) {
-    
-
-    const filesAndFolders = fs.readdirSync(dirPath);
-    
-    let arrayOfFiles:string[] = [];
-    
-    filesAndFolders.forEach(file=>{
-        const fullFilePath  = path.join(dirPath,file);
-        if(fs.statSync(fullFilePath).isDirectory()){
-            arrayOfFiles = arrayOfFiles.concat(getAllFiles(fullFilePath));
-        }else{
-            arrayOfFiles.push(fullFilePath);
-        }
-    })
-    
-  
-    return arrayOfFiles;
-  }

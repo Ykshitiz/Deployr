@@ -1,10 +1,11 @@
-import "dotenv/config"; 
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { generate, getAllFiles } from "./utils";
+import { generate } from "./utils";
 import { simpleGit } from "simple-git";
 import path from "path";
 import { uploadFiles } from "./aws";
+import { getAllFiles } from "./files";
 const app = express();
 
 app.use(cors());
@@ -16,16 +17,18 @@ app.get("/", (req, res) => {
     : res.send("Hello World");
 });
 
-
-uploadFiles("kshitij/package.json", path.join(__dirname, "package.json"));
-
 app.post("/deploy", async (req, res) => {
   const repoUrl = req.body.repoUrl;
   const id = generate();
-  await simpleGit().clone(repoUrl, path.join(__dirname, `dist/output/${id}`));
+  await simpleGit().clone(repoUrl, path.join(__dirname, `output/${id}`));
 
-  const files = getAllFiles(path.join(__dirname, `dist/output/${id}`));
-  console.log(files);
+  const files = getAllFiles(path.join(__dirname, `output/${id}`));
+  //   console.log(files);
+
+  await Promise.all(
+    files.map((file) => uploadFiles(file.slice(__dirname.length + 1), file))
+  );
+
   res.json({ message: `Deploying from ${repoUrl} with id ${id}` });
 });
 
