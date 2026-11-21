@@ -13,8 +13,9 @@
   "type": "commonjs",
   "dependencies": {
     "@types/express": "^5.0.6",
-    "aws-sdk": "^1.18.0",
+    "aws-sdk": "^2.1693.0",
     "cors": "^2.8.6",
+    "dotenv": "^18.0.10",
     "express": "^5.3.0",
     "redis": "^6.3.1",
     "simple-git": "^4.1.0"

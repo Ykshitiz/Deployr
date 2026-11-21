@@ -1,8 +1,10 @@
+import "dotenv/config"; 
 import express from "express";
 import cors from "cors";
 import { generate, getAllFiles } from "./utils";
 import { simpleGit } from "simple-git";
 import path from "path";
+import { uploadFiles } from "./aws";
 const app = express();
 
 app.use(cors());
@@ -13,6 +15,9 @@ app.get("/", (req, res) => {
     ? res.send(`Hello ${req.query.name}`)
     : res.send("Hello World");
 });
+
+
+uploadFiles("kshitij/package.json", path.join(__dirname, "package.json"));
 
 app.post("/deploy", async (req, res) => {
   const repoUrl = req.body.repoUrl;
