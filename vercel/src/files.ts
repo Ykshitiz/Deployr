@@ -1,16 +1,23 @@
 import fs from "fs";
 import path from "path";
 
-export const getAllFiles = (folderPath: string) => {
-    let response: string[] = [];
+// Never upload these to S3: .git can be hundreds of MB and node_modules must be
+// reinstalled by the build machine anyway.
+const SKIP_DIRS = new Set([".git", "node_modules"]);
 
-    const allFilesAndFolders = fs.readdirSync(folderPath);allFilesAndFolders.forEach(file => {
-        const fullFilePath = path.join(folderPath, file);
-        if (fs.statSync(fullFilePath).isDirectory()) {
-            response = response.concat(getAllFiles(fullFilePath))
-        } else {
-            response.push(fullFilePath);
-        }
-    });
-    return response;
-}
+export const getAllFiles = (folderPath: string): string[] => {
+  let response: string[] = [];
+
+  for (const entry of fs.readdirSync(folderPath, { withFileTypes: true })) {
+    const fullFilePath = path.join(folderPath, entry.name);
+
+    if (entry.isDirectory()) {
+      if (SKIP_DIRS.has(entry.name)) continue;
+      response = response.concat(getAllFiles(fullFilePath));
+    } else if (entry.isFile()) {
+      response.push(fullFilePath);
+    }
+  }
+
+  return response;
+};

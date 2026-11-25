@@ -1,14 +1,31 @@
-import fs from "fs";
-import path from "path";
 const MAX_LENGTH = 5;
+const SUBSET = "123456789qwertyuiopalkdjfjhgzmxnvbcs";
 
-export function generate(){
-    let  ans = "";
-    const subset = "123456789qwertyuiopalkdjfjhgzmxnvbcs";
+export function generate(): string {
+  let ans = "";
+  for (let i = 0; i < MAX_LENGTH; i++) {
+    ans += SUBSET[Math.floor(Math.random() * SUBSET.length)];
+  }
+  return ans;
+}
 
-    for(let i =0 ;i<MAX_LENGTH;i++){
-        ans += subset[Math.floor(Math.random()*subset.length)];
+/** Runs `fn` over `items` with at most `limit` promises in flight. */
+export async function mapLimit<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<void>
+): Promise<void> {
+  let next = 0;
+
+  const workers = Array.from(
+    { length: Math.min(Math.max(limit, 1), items.length) },
+    async () => {
+      while (next < items.length) {
+        const index = next++;
+        await fn(items[index], index);
+      }
     }
-    return ans;
+  );
 
+  await Promise.all(workers);
 }
