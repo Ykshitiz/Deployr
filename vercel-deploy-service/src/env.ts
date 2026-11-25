@@ -31,6 +31,9 @@ export const UPLOAD_CONCURRENCY = Number(
   process.env.UPLOAD_CONCURRENCY ?? 8
 );
 
+export const REQUEST_HANDLER_BASE_URL =
+  process.env.REQUEST_HANDLER_BASE_URL ?? "http://localhost:4000";
+
 // Keep the checked out repo on disk after a successful deploy (useful while
 // debugging). Set KEEP_BUILD=false to delete it once the build is uploaded.
 export const KEEP_BUILD = process.env.KEEP_BUILD !== "false";

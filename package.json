@@ -1,5 +1,17 @@
 {
+  "name": "deployr",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A small Vercel-style deployment platform: clone, build, store on S3, serve.",
+  "scripts": {
+    "setup": "npm --prefix vercel install && npm --prefix vercel-deploy-service install && npm --prefix request-handler install && npm --prefix frontend install",
+    "postinstall": "npm run setup",
+    "dev": "concurrently -k -n api,worker,sites,ui -c blue,magenta,green,cyan \"npm --prefix vercel run dev\" \"npm --prefix vercel-deploy-service run dev\" \"npm --prefix request-handler run dev\" \"npm --prefix frontend run dev\"",
+    "build": "npm --prefix vercel run build && npm --prefix vercel-deploy-service run build && npm --prefix request-handler run build && npm --prefix frontend run build",
+    "start": "concurrently -k -n api,worker,sites -c blue,magenta,green \"npm --prefix vercel start\" \"npm --prefix vercel-deploy-service start\" \"npm --prefix request-handler start\"",
+    "typecheck": "npm --prefix vercel run typecheck && npm --prefix vercel-deploy-service run typecheck && npm --prefix request-handler run typecheck"
+  },
   "devDependencies": {
-    "@types/express": "^5.0.6"
+    "concurrently": "^9.2.1"
   }
 }

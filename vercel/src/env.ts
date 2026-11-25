@@ -24,3 +24,6 @@ export const BUCKET_NAME =
   process.env.AWS_BUCKET_NAME ?? "vercel-bucket-test62";
 
 export const PORT = Number(process.env.PORT ?? 3000);
+
+export const REQUEST_HANDLER_BASE_URL =
+  process.env.REQUEST_HANDLER_BASE_URL ?? "http://localhost:4000";

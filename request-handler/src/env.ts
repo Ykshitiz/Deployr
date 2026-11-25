@@ -7,4 +7,4 @@ dotenv.config({ path: path.join(__dirname, "..", ".env"), quiet: true });
 export const BUCKET_NAME =
   process.env.AWS_BUCKET_NAME ?? "vercel-bucket-test62";
 
-export const PORT = Number(process.env.PORT ?? 3001);
+export const PORT = Number(process.env.PORT ?? 4000);

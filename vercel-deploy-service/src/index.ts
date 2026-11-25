@@ -11,7 +11,7 @@ import {
   findProjectRoot,
   installDependencies,
 } from "./utils";
-import { KEEP_BUILD, REDIS_URL } from "./env";
+import { KEEP_BUILD, REDIS_URL, REQUEST_HANDLER_BASE_URL } from "./env";
 
 const publisher = createClient({ url: REDIS_URL });
 publisher.on("error", (err) =>
@@ -59,6 +59,8 @@ function createJobLogger(id: string) {
       buffer.push(`[${new Date().toISOString()}] ${line}`);
       schedule();
     },
+    // Clears the pending batch timer and writes everything buffered so far.
+    // Safe to call more than once; later calls are no-ops.
     async close() {
       if (timer) {
         clearTimeout(timer);
@@ -96,16 +98,24 @@ async function runJob(id: string): Promise<void> {
 
     await copyFinalDist(id, buildOutputDir, log);
 
-    await publisher.hSet("status", id, "built");
-    log(`Deployment ready: http://${id}.localhost:3001`);
-
     if (!KEEP_BUILD) {
       await rm(jobDir, { recursive: true, force: true });
       log("Removed local build files");
     }
+
+    log(
+      `Deployment ready: ${REQUEST_HANDLER_BASE_URL}/?id=${encodeURIComponent(
+        id
+      )}`
+    );
+    // Flush before publishing the terminal status so the SSE stream does not
+    // close before the last log lines are visible.
+    await logger.close();
+    await publisher.hSet("status", id, "built");
   } catch (err: any) {
     console.error(`[${id}] build failed`, err);
     log(`Build failed: ${err?.message ?? err}`);
+    await logger.close();
     await publisher
       .hSet("status", id, "failed")
       .catch((redisErr) =>
