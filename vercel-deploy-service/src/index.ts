@@ -1,7 +1,7 @@
 import { createClient } from "redis";
-import { downloadS3Folder } from "./aws";
+import { downloadS3Folder, copyFinalDist } from "./aws";
 import { buildProject } from "./utils";
-import { copyFinalDist } from "./aws";
+
 const subscriber = createClient();
 subscriber.on("error", (err) => console.error("Redis Client Error", err));
 
@@ -13,18 +13,22 @@ async function main() {
 
   while (true) {
     const response = await blockingClient.brPop("build-queue", 0);
-    if(response === null || response.element === undefined) {
+    if (!response || !response.element) {
       console.log("No job received, continuing...");
       continue;
     }
-    if(response.element.trim() === "") {
-      console.log("invalid id received, continuing...");
+
+    const id = response.element.trim();
+    if (id === "") {
+      console.log("Invalid id received, continuing...");
+      continue;
     }
 
-    if (response) console.log("Received job:", response.element);
-    await downloadS3Folder(`output/${response?.element}`);
-    await buildProject(response?.element || "");
-    await copyFinalDist(response?.element || "");
+    console.log("Received job:", id);
+    await downloadS3Folder(`output/${id}`);
+    await buildProject(id);
+    await copyFinalDist(id);
+    console.log("Completed deployment for job:", id);
   }
 }
 

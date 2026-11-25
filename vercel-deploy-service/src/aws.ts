@@ -1,23 +1,19 @@
-import {S3Client,ListObjectsV2Command,ListObjectsV2CommandOutput,GetObjectCommand,} from "@aws-sdk/client-s3";
-import { mkdir, writeFile } from "fs/promises";
+import {
+  S3Client,
+  ListObjectsV2Command,
+  ListObjectsV2CommandOutput,
+  GetObjectCommand,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
+import { mkdir, writeFile, readFile } from "fs/promises";
 import fs from "fs";
 import path from "path";
-import AWS from "aws-sdk";
+
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || "ap-south-1",
-//   credentials: {
-//     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-//     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-//   },
 });
-const s3 = new AWS.S3({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: process.env.AWS_REGION,
-    // endpoint: process.env.AWS_ENDPOINT,
-  });
-  
-const BUCKET_NAME = process.env.AWS_BUCKET_NAME; // Update with your bucket name
+
+const BUCKET_NAME = process.env.AWS_BUCKET_NAME || "vercel-bucket-test62";
 
 export async function downloadS3Folder(prefix: string) {
   let continuationToken: string | undefined = undefined;
@@ -48,7 +44,6 @@ export async function downloadS3Folder(prefix: string) {
       const getResponse = await s3Client.send(getCommand);
       if (!getResponse.Body) return;
 
-      // Saves locally to <project-root>/dist/<prefix>/... (matching standard Vercel clone structure)
       const localFilePath = path.join(__dirname, item.Key);
       await mkdir(path.dirname(localFilePath), { recursive: true });
 
@@ -58,41 +53,68 @@ export async function downloadS3Folder(prefix: string) {
 
     await Promise.all(downloadPromises);
     console.log(
-        `Downloaded ${downloadPromises.length} files from S3 folder: ${prefix}`
-    )
+      `Downloaded ${downloadPromises.length} files from S3 folder: ${prefix}`
+    );
     continuationToken = listResponse.NextContinuationToken;
   } while (continuationToken);
 }
 
+export async function copyFinalDist(id: string) {
+  const folderPath = path.join(__dirname, `output/${id}/dist`);
+  const allFiles = getAllFiles(folderPath);
 
-export function copyFinalDist(id: string) {
-    const folderPath = path.join(__dirname, `output/${id}/dist`);
-    const allFiles = getAllFiles(folderPath);
-    allFiles.forEach(file => {
-        uploadFile(`dist/${id}/` + file.slice(folderPath.length + 1), file);
+  await Promise.all(
+    allFiles.map((file) => {
+      const relativePath = path
+        .relative(folderPath, file)
+        .split(path.sep)
+        .join("/");
+      return uploadFile(`dist/${id}/${relativePath}`, file);
     })
+  );
+  console.log(`Uploaded ${allFiles.length} built files for job: ${id}`);
 }
 
-const getAllFiles = (folderPath: string) => {
-    let response: string[] = [];
+const getAllFiles = (folderPath: string): string[] => {
+  let response: string[] = [];
 
-    const allFilesAndFolders = fs.readdirSync(folderPath);allFilesAndFolders.forEach(file => {
-        const fullFilePath = path.join(folderPath, file);
-        if (fs.statSync(fullFilePath).isDirectory()) {
-            response = response.concat(getAllFiles(fullFilePath))
-        } else {
-            response.push(fullFilePath);
-        }
-    });
-    return response;
-}
+  const allFilesAndFolders = fs.readdirSync(folderPath);
+  allFilesAndFolders.forEach((file) => {
+    const fullFilePath = path.join(folderPath, file);
+    if (fs.statSync(fullFilePath).isDirectory()) {
+      response = response.concat(getAllFiles(fullFilePath));
+    } else {
+      response.push(fullFilePath);
+    }
+  });
+  return response;
+};
+
+const getContentType = (filePath: string): string => {
+  const ext = path.extname(filePath).toLowerCase();
+  const mimeTypes: Record<string, string> = {
+    ".html": "text/html",
+    ".css": "text/css",
+    ".js": "application/javascript",
+    ".json": "application/json",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+  };
+  return mimeTypes[ext] || "application/octet-stream";
+};
 
 const uploadFile = async (fileName: string, localFilePath: string) => {
-    const fileContent = fs.readFileSync(localFilePath);
-    const response = await s3.upload({
-        Body: fileContent,
-        Bucket: "vercel",
-        Key: fileName,
-    }).promise();
-    console.log(response);
-}
+  const fileContent = await readFile(localFilePath);
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: fileName,
+      Body: fileContent,
+      ContentType: getContentType(localFilePath),
+    })
+  );
+  console.log(`Uploaded: ${fileName}`);
+};
